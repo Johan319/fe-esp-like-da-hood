@@ -1,0 +1,112 @@
+local espOn = true  -- Controls whether ESP is always enabled or not
+local UserInputService = game:GetService("UserInputService")
+local localPlayer = game.Players.LocalPlayer  -- Get the local player
+
+-- Function to create ESP for a player
+local function createESP(plr)
+    -- Skip creating ESP for the local player (the player running the script)
+    if plr == localPlayer then return end
+
+    -- Make sure the player has a character and is alive
+    if plr.Character and plr.Character:FindFirstChild("Head") then
+        local head = plr.Character.Head
+
+        -- Create the ESP BillboardGui if it doesn't exist
+        local bb = head:FindFirstChild("ESP") or Instance.new("BillboardGui", head)
+        bb.Name = "ESP"
+        bb.Size = UDim2.new(0, 80, 0, 20)
+        bb.AlwaysOnTop = true
+        bb.Adornee = head  -- Attach the BillboardGui to the player's head
+
+        -- Add a text label with the player's display name and username
+        local lbl = bb:FindFirstChild("Name") or Instance.new("TextLabel", bb)
+        lbl.Name = "Name"
+        lbl.BackgroundTransparency = 1
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.TextColor3 = Color3.new(1, 0, 0)  -- Red text color
+        lbl.TextScaled = true
+        lbl.Text = plr.DisplayName .. " (" .. plr.Name .. ")"  -- Display Name and Username
+
+        -- Enable or disable ESP based on the `espOn` variable
+        bb.Enabled = espOn
+    end
+end
+
+-- Function to remove ESP for a player
+local function removeESP(plr)
+    if plr.Character then
+        local head = plr.Character:FindFirstChild("Head")
+        if head then
+            local bb = head:FindFirstChild("ESP")
+            if bb then
+                bb:Destroy()  -- Destroy the ESP when the player dies or leaves
+            end
+        end
+    end
+end
+
+-- Function to handle when the player's character respawns (dies)
+local function onCharacterAdded(plr)
+    -- Create ESP whenever the character respawns
+    createESP(plr)
+
+    -- Listen for the player’s death and remove ESP if they die
+    plr.Character:WaitForChild("Humanoid").Died:Connect(function()
+        removeESP(plr)
+    end)
+end
+
+-- Function to handle new players joining the game
+local function onPlayerAdded(plr)
+    plr.CharacterAdded:Connect(function()
+        -- Create ESP whenever a player joins or respawns
+        onCharacterAdded(plr)
+    end)
+end
+
+-- Function to remove ESP when a player leaves
+local function onPlayerRemoving(plr)
+    removeESP(plr)
+end
+
+-- Function to ensure all players already in the game get ESP when the script starts
+local function setupAllPlayers()
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        -- Make sure ESP is created for all players except the local player
+        if plr ~= localPlayer then
+            onCharacterAdded(plr)
+        end
+    end
+end
+
+-- Function to toggle ESP visibility when F1 is pressed
+local function toggleESP()
+    espOn = not espOn  -- Toggle the value of espOn
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr.Character and plr ~= localPlayer then
+            local head = plr.Character:FindFirstChild("Head")
+            if head then
+                local bb = head:FindFirstChild("ESP")
+                if bb then
+                    bb.Enabled = espOn  -- Toggle the ESP visibility
+                end
+            end
+        end
+    end
+end
+
+-- Setup event listener for F1 key press
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end  -- Ignore input if it's processed by the game (e.g., typing in a text box)
+    
+    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.F1 then
+        toggleESP()  -- Toggle ESP when F1 is pressed
+    end
+end)
+
+-- Setup event listeners for player join and leave
+game.Players.PlayerAdded:Connect(onPlayerAdded)
+game.Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+-- Create ESP for all players already in the game when the script starts
+setupAllPlayers()
