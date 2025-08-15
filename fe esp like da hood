@@ -1,11 +1,10 @@
 local espOn = true  -- Controls whether ESP is always enabled or not
 local UserInputService = game:GetService("UserInputService")
-local localPlayer = game.Players.LocalPlayer  -- Get the local player
 
 -- Function to create ESP for a player
 local function createESP(plr)
     -- Skip creating ESP for the local player (the player running the script)
-    if plr == localPlayer then return end
+    if plr == game.Players.LocalPlayer then return end
 
     -- Make sure the player has a character and is alive
     if plr.Character and plr.Character:FindFirstChild("Head") then
@@ -27,21 +26,8 @@ local function createESP(plr)
         lbl.TextScaled = true
         lbl.Text = plr.DisplayName .. " (" .. plr.Name .. ")"  -- Display Name and Username
 
-        -- Enable or disable ESP based on the `espOn` variable
+        -- Enable ESP for the player (always on)
         bb.Enabled = espOn
-    end
-end
-
--- Function to remove ESP for a player
-local function removeESP(plr)
-    if plr.Character then
-        local head = plr.Character:FindFirstChild("Head")
-        if head then
-            local bb = head:FindFirstChild("ESP")
-            if bb then
-                bb:Destroy()  -- Destroy the ESP when the player dies or leaves
-            end
-        end
     end
 end
 
@@ -50,31 +36,27 @@ local function onCharacterAdded(plr)
     -- Create ESP whenever the character respawns
     createESP(plr)
 
-    -- Listen for the player’s death and remove ESP if they die
+    -- Listen for the player’s death and ensure ESP is recreated
     plr.Character:WaitForChild("Humanoid").Died:Connect(function()
-        removeESP(plr)
+        -- Recreate ESP after respawn
+        createESP(plr)  -- Recreate ESP on respawn
     end)
 end
 
 -- Function to handle new players joining the game
 local function onPlayerAdded(plr)
+    -- Create ESP whenever a player joins or respawns
     plr.CharacterAdded:Connect(function()
-        -- Create ESP whenever a player joins or respawns
-        onCharacterAdded(plr)
+        createESP(plr)  -- Always create ESP for new players
     end)
-end
-
--- Function to remove ESP when a player leaves
-local function onPlayerRemoving(plr)
-    removeESP(plr)
 end
 
 -- Function to ensure all players already in the game get ESP when the script starts
 local function setupAllPlayers()
     for _, plr in ipairs(game.Players:GetPlayers()) do
-        -- Make sure ESP is created for all players except the local player
-        if plr ~= localPlayer then
-            onCharacterAdded(plr)
+        -- Create ESP for all players except the local player
+        if plr ~= game.Players.LocalPlayer then
+            createESP(plr)
         end
     end
 end
@@ -82,8 +64,10 @@ end
 -- Function to toggle ESP visibility when F1 is pressed
 local function toggleESP()
     espOn = not espOn  -- Toggle the value of espOn
+
+    -- Loop through all players and toggle the visibility of their ESP
     for _, plr in ipairs(game.Players:GetPlayers()) do
-        if plr.Character and plr ~= localPlayer then
+        if plr.Character and plr ~= game.Players.LocalPlayer then
             local head = plr.Character:FindFirstChild("Head")
             if head then
                 local bb = head:FindFirstChild("ESP")
@@ -106,7 +90,9 @@ end)
 
 -- Setup event listeners for player join and leave
 game.Players.PlayerAdded:Connect(onPlayerAdded)
-game.Players.PlayerRemoving:Connect(onPlayerRemoving)
+game.Players.PlayerRemoving:Connect(function(plr)
+    -- Ensure ESP remains active even if player leaves
+end)
 
 -- Create ESP for all players already in the game when the script starts
 setupAllPlayers()
